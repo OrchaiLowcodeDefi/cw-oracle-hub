@@ -13,7 +13,7 @@ use cw3::{
     Proposal, ProposalListResponse, ProposalResponse, Status, Vote, VoterDetail, VoterListResponse,
     VoterResponse, Votes,
 };
-use cw3_fixed_multisig::state::next_id;
+
 use cw4::{Cw4Contract, MemberChangedHookMsg, MemberDiff, MEMBERS_KEY};
 use cw_storage_plus::{Bound, Map};
 use cw_utils::{maybe_addr, Expiration, ThresholdResponse};
@@ -22,7 +22,7 @@ use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, VoteInfo, VoteListResponse, VoteResponse,
 };
-use crate::state::{Config, Data, BALLOTS, CONFIG, PROPOSALS};
+use crate::state::{next_id, Config, Data, BALLOTS, CONFIG, PROPOSALS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw-oracle-hub";

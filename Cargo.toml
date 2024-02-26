@@ -46,8 +46,6 @@ cw4 = { version = "1.0.1" }
 cw20 = { version = "1.0.1" }
 cw20-base = { version = "1.0.1" }
 cw-storage-plus = { version = "1.0.1" }
-cw4-group = { version = "1.0.1" }
-cw3-fixed-multisig = { version = "1.0.1" }
 
 [dev-dependencies]
 cosmwasm-vm = { version = "=1.2" }

@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, QuerierWrapper, Uint128};
+use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Storage, Uint128};
 use cw3::{DepositInfo, Proposal};
 use cw4::Cw4Contract;
 use cw_storage_plus::{Item, Map};
@@ -61,6 +61,14 @@ impl Config {
 pub struct Data {
     pub weight: u64,
     pub price: Uint128,
+}
+
+pub const PROPOSAL_COUNT: Item<u64> = Item::new("proposal_count");
+
+pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
+    let id: u64 = PROPOSAL_COUNT.may_load(store)?.unwrap_or_default() + 1;
+    PROPOSAL_COUNT.save(store, &id)?;
+    Ok(id)
 }
 
 // unique items
