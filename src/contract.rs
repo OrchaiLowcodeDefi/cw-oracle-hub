@@ -308,7 +308,6 @@ pub fn execute_membership_hook(
 
     Ok(Response::default())
 }
-
 fn assert_last_proposal_has_done(deps: Deps) -> Result<(), ContractError> {
     let last_prop_id = last_id(deps.storage)?;
 
@@ -318,11 +317,10 @@ fn assert_last_proposal_has_done(deps: Deps) -> Result<(), ContractError> {
 
     let prop = PROPOSALS.load(deps.storage, last_prop_id)?;
 
-    if ![Status::Executed, Status::Rejected].contains(&prop.status) {
-        return Err(ContractError::CanNotPropose {});
+    match prop.status {
+        Status::Executed | Status::Rejected => Ok(()),
+        _ => Err(ContractError::CanNotPropose {}),
     }
-
-    Ok(())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -529,13 +527,10 @@ fn list_voters(
 }
 
 fn query_last_proposal(deps: Deps, env: Env) -> StdResult<Option<ProposalResponse>> {
-    let last_prop_id = last_id(deps.storage)?;
-
-    if last_prop_id == 0 {
-        return Ok(None);
+    match last_id(deps.storage)? {
+        0 => Ok(None),
+        last_prop_id => Ok(Some(query_proposal(deps, env, last_prop_id)?)),
     }
-
-    Ok(Some(query_proposal(deps, env, last_prop_id)?))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
