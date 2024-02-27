@@ -212,7 +212,8 @@ pub fn execute_vote(
             .prefix(proposal_id)
             .range(deps.storage, None, None, Order::Ascending)
             .map(|item| Ok(item?.1.price))
-            .collect::<StdResult<Vec<_>>>()?;
+            .collect::<StdResult<Vec<_>>>()?
+            .sort();
 
         let mid = prices.len() / 2;
         let median_price = prices[mid];
