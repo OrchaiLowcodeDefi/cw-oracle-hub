@@ -22,7 +22,7 @@ use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, VoteInfo, VoteListResponse, VoteResponse,
 };
-use crate::state::{next_id, Config, Data, BALLOTS, CONFIG, PROPOSALS};
+use crate::state::{last_id, next_id, Config, Data, BALLOTS, CONFIG, PROPOSALS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw-oracle-hub";
@@ -90,6 +90,9 @@ pub fn execute_propose(
     // we ignore earliest
     latest: Option<Expiration>,
 ) -> Result<Response<Empty>, ContractError> {
+    // check last proposal must be executed or rejected
+    assert_last_proposal_has_done(deps.as_ref())?;
+
     // only members of the multisig can create a proposal
     let cfg = CONFIG.load(deps.storage)?;
 
@@ -304,6 +307,22 @@ pub fn execute_membership_hook(
     }
 
     Ok(Response::default())
+}
+
+fn assert_last_proposal_has_done(deps: Deps) -> Result<(), ContractError> {
+    let last_prop_id = last_id(deps.storage)?;
+
+    if last_prop_id == 0 {
+        return Ok(());
+    }
+
+    let prop = PROPOSALS.load(deps.storage, last_prop_id)?;
+
+    if ![Status::Executed, Status::Rejected].contains(&prop.status) {
+        return Err(ContractError::CanNotPropose {});
+    }
+
+    Ok(())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

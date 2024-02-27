@@ -36,6 +36,9 @@ pub enum ContractError {
     #[error("Cannot close completed or passed proposals")]
     WrongCloseStatus {},
 
+    #[error("Last proposal must have been executed before you can propose")]
+    CanNotPropose {},
+
     #[error("{0}")]
     Payment(#[from] PaymentError),
 
