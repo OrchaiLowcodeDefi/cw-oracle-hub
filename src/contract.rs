@@ -22,7 +22,7 @@ use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, VoteInfo, VoteListResponse, VoteResponse,
 };
-use crate::state::{next_id, Config, Data, BALLOTS, CONFIG, PROPOSALS};
+use crate::state::{next_id, Config, Data, Executor, BALLOTS, CONFIG, PROPOSALS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw-oracle-hub";
@@ -205,7 +205,11 @@ pub fn execute_vote(
 
     // if passed then execute
     if prop.status == Status::Passed {
-        cfg.authorize(&deps.querier, &info.sender)?;
+        if let Some(Executor::Only(addr)) = cfg.executor {
+            if addr != info.sender {
+                return Err(ContractError::Unauthorized {});
+            }
+        }
 
         // get price by using median
         let prices = BALLOTS
