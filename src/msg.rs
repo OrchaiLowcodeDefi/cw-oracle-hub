@@ -78,6 +78,8 @@ pub enum QueryMsg {
     /// Gets the current configuration.
     #[returns(crate::state::Config)]
     Config {},
+    #[returns(Option<cw3::ProposalResponse>)]
+    LastProposal {},
 }
 
 #[cw_serde]

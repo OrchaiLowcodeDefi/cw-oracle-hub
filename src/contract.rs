@@ -348,6 +348,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&list_voters(deps, start_after, limit)?)
         }
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
+        QueryMsg::LastProposal {} => to_binary(&query_last_proposal(deps, env)?),
     }
 }
 
@@ -525,6 +526,16 @@ fn list_voters(
         })
         .collect();
     Ok(VoterListResponse { voters })
+}
+
+fn query_last_proposal(deps: Deps, env: Env) -> StdResult<Option<ProposalResponse>> {
+    let last_prop_id = last_id(deps.storage)?;
+
+    if last_prop_id == 0 {
+        return Ok(None);
+    }
+
+    Ok(Some(query_proposal(deps, env, last_prop_id)?))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
