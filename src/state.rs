@@ -34,6 +34,12 @@ pub fn next_id(store: &mut dyn Storage) -> StdResult<u64> {
     Ok(id)
 }
 
+pub fn last_id(store: &dyn Storage) -> StdResult<u64> {
+    let id: u64 = PROPOSAL_COUNT.may_load(store)?.unwrap_or_default();
+
+    Ok(id)
+}
+
 // unique items
 pub const CONFIG: Item<Config> = Item::new("config");
 pub const BALLOTS: Map<(u64, &Addr), Data> = Map::new("votes_v2");

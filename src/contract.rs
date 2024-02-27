@@ -22,7 +22,7 @@ use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, VoteInfo, VoteListResponse, VoteResponse,
 };
-use crate::state::{next_id, Config, Data, BALLOTS, CONFIG, PROPOSALS};
+use crate::state::{last_id, next_id, Config, Data, BALLOTS, CONFIG, PROPOSALS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:cw-oracle-hub";
@@ -90,6 +90,9 @@ pub fn execute_propose(
     // we ignore earliest
     latest: Option<Expiration>,
 ) -> Result<Response<Empty>, ContractError> {
+    // check last proposal must be executed or rejected
+    assert_last_proposal_has_done(deps.as_ref(), &env)?;
+
     // only members of the multisig can create a proposal
     let cfg = CONFIG.load(deps.storage)?;
 
@@ -305,6 +308,22 @@ pub fn execute_membership_hook(
 
     Ok(Response::default())
 }
+fn assert_last_proposal_has_done(deps: Deps, env: &Env) -> Result<(), ContractError> {
+    let last_prop_id = last_id(deps.storage)?;
+
+    if last_prop_id == 0 {
+        return Ok(());
+    }
+
+    let mut prop = PROPOSALS.load(deps.storage, last_prop_id)?;
+
+    prop.update_status(&env.block);
+
+    match prop.status {
+        Status::Executed | Status::Rejected => Ok(()),
+        _ => Err(ContractError::CanNotPropose {}),
+    }
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
@@ -329,6 +348,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&list_voters(deps, start_after, limit)?)
         }
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
+        QueryMsg::LastProposal {} => to_binary(&query_last_proposal(deps, env)?),
     }
 }
 
@@ -506,6 +526,13 @@ fn list_voters(
         })
         .collect();
     Ok(VoterListResponse { voters })
+}
+
+fn query_last_proposal(deps: Deps, env: Env) -> StdResult<Option<ProposalResponse>> {
+    match last_id(deps.storage)? {
+        0 => Ok(None),
+        last_prop_id => Ok(Some(query_proposal(deps, env, last_prop_id)?)),
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
