@@ -4,7 +4,7 @@ use cw3::UncheckedDepositInfo;
 use cw4::MemberChangedHookMsg;
 use cw_utils::{Duration, Expiration, Threshold};
 
-use crate::state::{Data, Executor};
+use crate::state::Data;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -12,9 +12,7 @@ pub struct InstantiateMsg {
     pub group_addr: String,
     pub threshold: Threshold,
     pub max_submitting_period: Duration,
-    // who is able to execute aggregated result
-    // None means that anyone can execute
-    pub executor: Option<Executor>,
+
     /// The cost of creating a proposal (if any).
     pub proposal_deposit: Option<UncheckedDepositInfo>,
 

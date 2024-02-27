@@ -4,10 +4,7 @@ use cw_utils::{Duration, Threshold};
 use osmosis_test_tube::{Module, OraichainTestApp, Wasm};
 use test_tube::{Account, SigningAccount};
 
-use crate::{
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::Executor,
-};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 
 const CW4_GROUP_WASM_BYTES: &[u8] = include_bytes!("../testdata/cw4-group.wasm");
 const ORACLE_HUB_WASM_BYTES: &[u8] = include_bytes!("../testdata/cw-oracle-hub.wasm");
@@ -74,7 +71,6 @@ fn init_app() -> (OraichainTestApp, Vec<SigningAccount>, String) {
                 group_addr: cw4_group_addr.clone(),
                 threshold: Threshold::AbsoluteCount { weight: 3 },
                 max_submitting_period: Duration::Time(3600),
-                executor: Some(Executor::Member),
                 proposal_deposit: None,
                 price_key: "orai".to_string(),
                 hook_contracts: vec![],

@@ -33,9 +33,6 @@ pub enum ContractError {
     #[error("Already voted on this proposal")]
     AlreadyVoted {},
 
-    #[error("Proposal must have passed and not yet been executed")]
-    WrongExecuteStatus {},
-
     #[error("Cannot close completed or passed proposals")]
     WrongCloseStatus {},
 
