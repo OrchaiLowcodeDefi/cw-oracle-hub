@@ -34,9 +34,6 @@ pub enum ExecuteMsg {
         proposal_id: u64,
         price: Uint128,
     },
-    Execute {
-        proposal_id: u64,
-    },
     Close {
         proposal_id: u64,
     },

@@ -76,7 +76,6 @@ pub fn execute(
         ExecuteMsg::Vote { proposal_id, price } => {
             execute_vote(deps, env, info, proposal_id, price)
         }
-        ExecuteMsg::Execute { proposal_id } => execute_execute(deps, env, info, proposal_id),
         ExecuteMsg::Close { proposal_id } => execute_close(deps, env, info, proposal_id),
         ExecuteMsg::MemberChangedHook(MemberChangedHookMsg { diffs }) => {
             execute_membership_hook(deps, env, info, diffs)
@@ -201,82 +200,59 @@ pub fn execute_vote(
     // update vote tally
     prop.votes.add_vote(Vote::Yes, vote_power);
     prop.update_status(&env.block);
-    PROPOSALS.save(deps.storage, proposal_id, &prop)?;
 
-    Ok(Response::new()
+    let mut response = Response::new();
+
+    // if passed then execute
+    if prop.status == Status::Passed {
+        cfg.authorize(&deps.querier, &info.sender)?;
+
+        // get price by using median
+        let prices = BALLOTS
+            .prefix(proposal_id)
+            .range(deps.storage, None, None, Order::Ascending)
+            .map(|item| Ok(item?.1.price))
+            .collect::<StdResult<Vec<_>>>()?;
+
+        let mid = prices.len() / 2;
+        let median_price = prices[mid];
+
+        // now create message for props.msgs and update it
+        prop.msgs = cfg
+            .hook_contracts
+            .iter()
+            .map(|addr| {
+                CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: addr.to_string(),
+                    funds: vec![],
+                    msg: Binary::from(
+                        format!(
+                            r#"{{"append_price":{{"key":"{}","price":"{}","timestamp":"{}"}}}}"#,
+                            cfg.price_key,
+                            median_price,
+                            env.block.time.seconds()
+                        )
+                        .as_bytes(),
+                    ),
+                })
+            })
+            .collect();
+
+        // set it to executed
+        prop.status = Status::Executed;
+
+        // Unconditionally refund here.
+        if let Some(deposit) = &prop.deposit {
+            response = response.add_message(deposit.get_return_deposit_message(&prop.proposer)?);
+        };
+    }
+
+    PROPOSALS.save(deps.storage, proposal_id, &prop)?;
+    Ok(response
         .add_attribute("action", "vote")
         .add_attribute("sender", info.sender)
         .add_attribute("proposal_id", proposal_id.to_string())
         .add_attribute("status", format!("{:?}", prop.status)))
-}
-
-pub fn execute_execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    proposal_id: u64,
-) -> Result<Response, ContractError> {
-    let mut prop = PROPOSALS.load(deps.storage, proposal_id)?;
-    // we allow execution even after the proposal "expiration" as long as all vote come in before
-    // that point. If it was approved on time, it can be executed any time.
-    prop.update_status(&env.block);
-    if prop.status != Status::Passed {
-        return Err(ContractError::WrongExecuteStatus {});
-    }
-
-    let cfg = CONFIG.load(deps.storage)?;
-    cfg.authorize(&deps.querier, &info.sender)?;
-
-    // set it to executed
-    prop.status = Status::Executed;
-
-    // get price by using median
-    let prices = BALLOTS
-        .prefix(proposal_id)
-        .range(deps.storage, None, None, Order::Ascending)
-        .map(|item| Ok(item?.1.price))
-        .collect::<StdResult<Vec<_>>>()?;
-
-    let mid = prices.len() / 2;
-    let median_price = prices[mid];
-
-    // now create message for props.msgs and update it
-    prop.msgs = cfg
-        .hook_contracts
-        .iter()
-        .map(|addr| {
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: addr.to_string(),
-                funds: vec![],
-                msg: Binary::from(
-                    format!(
-                        r#"{{"append_price":{{"key":"{}","price":"{}","timestamp":"{}"}}}}"#,
-                        cfg.price_key,
-                        median_price,
-                        env.block.time.seconds()
-                    )
-                    .as_bytes(),
-                ),
-            })
-        })
-        .collect();
-
-    PROPOSALS.save(deps.storage, proposal_id, &prop)?;
-
-    // Unconditionally refund here.
-    let response = match prop.deposit {
-        Some(deposit) => {
-            Response::new().add_message(deposit.get_return_deposit_message(&prop.proposer)?)
-        }
-        None => Response::new(),
-    };
-
-    // dispatch all proposed messages
-    Ok(response
-        .add_messages(prop.msgs)
-        .add_attribute("action", "execute")
-        .add_attribute("sender", info.sender)
-        .add_attribute("proposal_id", proposal_id.to_string()))
 }
 
 pub fn execute_close(
