@@ -151,4 +151,41 @@ fn update_price_feed() {
         .unwrap();
 
     assert_eq!(proposal.status, Status::Executed);
+
+    // try create new proposal, successful
+    wasm.execute(
+        &cw_oracle_hub_addr,
+        &ExecuteMsg::Propose {
+            price: 11_000_000u128.into(),
+            latest: None,
+        },
+        &[],
+        member0,
+    )
+    .unwrap();
+
+    // try create new proposal, will be failed because last proposal still open
+    wasm.execute(
+        &cw_oracle_hub_addr,
+        &ExecuteMsg::Propose {
+            price: 11_000_000u128.into(),
+            latest: None,
+        },
+        &[],
+        member0,
+    )
+    .unwrap_err();
+
+    // try increase time, proposal will be reject, create new proposal success
+    app.increase_time(3700);
+    wasm.execute(
+        &cw_oracle_hub_addr,
+        &ExecuteMsg::Propose {
+            price: 11_000_000u128.into(),
+            latest: None,
+        },
+        &[],
+        member0,
+    )
+    .unwrap();
 }

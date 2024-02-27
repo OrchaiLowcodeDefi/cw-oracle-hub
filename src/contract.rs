@@ -91,7 +91,7 @@ pub fn execute_propose(
     latest: Option<Expiration>,
 ) -> Result<Response<Empty>, ContractError> {
     // check last proposal must be executed or rejected
-    assert_last_proposal_has_done(deps.as_ref())?;
+    assert_last_proposal_has_done(deps.as_ref(), &env)?;
 
     // only members of the multisig can create a proposal
     let cfg = CONFIG.load(deps.storage)?;
@@ -308,14 +308,16 @@ pub fn execute_membership_hook(
 
     Ok(Response::default())
 }
-fn assert_last_proposal_has_done(deps: Deps) -> Result<(), ContractError> {
+fn assert_last_proposal_has_done(deps: Deps, env: &Env) -> Result<(), ContractError> {
     let last_prop_id = last_id(deps.storage)?;
 
     if last_prop_id == 0 {
         return Ok(());
     }
 
-    let prop = PROPOSALS.load(deps.storage, last_prop_id)?;
+    let mut prop = PROPOSALS.load(deps.storage, last_prop_id)?;
+
+    prop.update_status(&env.block);
 
     match prop.status {
         Status::Executed | Status::Rejected => Ok(()),
