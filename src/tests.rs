@@ -72,7 +72,7 @@ fn init_app() -> (OraichainTestApp, Vec<SigningAccount>, String) {
                 threshold: Threshold::AbsoluteCount { weight: 3 },
                 max_submitting_period: Duration::Time(3600),
                 proposal_deposit: None,
-                price_key: "orai".to_string(),
+                price_keys: vec!["orai".to_string()],
                 hook_contracts: vec![],
             },
             Some(&owner.address()),
@@ -102,7 +102,7 @@ fn update_price_feed() {
             .execute(
                 &cw_oracle_hub_addr,
                 &ExecuteMsg::Propose {
-                    price: 11_000_000u128.into(),
+                    data: [("orai".to_string(), 11_000_000u128.into())].into(),
                     latest: None,
                 },
                 &[],
@@ -127,7 +127,7 @@ fn update_price_feed() {
         &cw_oracle_hub_addr,
         &ExecuteMsg::Vote {
             proposal_id,
-            price: 11_000_000u128.into(),
+            data: [("orai".to_string(), 11_000_000u128.into())].into(),
         },
         &[],
         member1,
@@ -139,7 +139,7 @@ fn update_price_feed() {
         &cw_oracle_hub_addr,
         &ExecuteMsg::Vote {
             proposal_id,
-            price: 11_000_000u128.into(),
+            data: [("orai".to_string(), 11_000_000u128.into())].into(),
         },
         &[],
         member2,
@@ -156,7 +156,7 @@ fn update_price_feed() {
     wasm.execute(
         &cw_oracle_hub_addr,
         &ExecuteMsg::Propose {
-            price: 11_000_000u128.into(),
+            data: [("orai".to_string(), 11_000_000u128.into())].into(),
             latest: None,
         },
         &[],
@@ -168,7 +168,7 @@ fn update_price_feed() {
     wasm.execute(
         &cw_oracle_hub_addr,
         &ExecuteMsg::Propose {
-            price: 11_000_000u128.into(),
+            data: [("orai".to_string(), 11_000_000u128.into())].into(),
             latest: None,
         },
         &[],
@@ -181,7 +181,7 @@ fn update_price_feed() {
     wasm.execute(
         &cw_oracle_hub_addr,
         &ExecuteMsg::Propose {
-            price: 11_000_000u128.into(),
+            data: [("orai".to_string(), 11_000_000u128.into())].into(),
             latest: None,
         },
         &[],

@@ -1,10 +1,12 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::{cw_serde, schemars::Map, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
 use cw3::UncheckedDepositInfo;
 use cw4::MemberChangedHookMsg;
 use cw_utils::{Duration, Expiration, Threshold};
 
 use crate::state::Data;
+
+pub type VoteData = Map<String, Uint128>; // key: price
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -16,7 +18,7 @@ pub struct InstantiateMsg {
     /// The cost of creating a proposal (if any).
     pub proposal_deposit: Option<UncheckedDepositInfo>,
 
-    pub price_key: String,
+    pub price_keys: Vec<String>,
     pub hook_contracts: Vec<Addr>,
 }
 
@@ -24,13 +26,13 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     Propose {
-        price: Uint128,
+        data: VoteData,
         // note: we ignore API-spec'd earliest if passed, always opens immediately
         latest: Option<Expiration>,
     },
     Vote {
         proposal_id: u64,
-        price: Uint128,
+        data: VoteData,
     },
     Close {
         proposal_id: u64,

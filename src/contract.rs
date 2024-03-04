@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Api, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
-    Order, QuerierWrapper, Response, StdResult, Storage, Uint128, WasmMsg,
+    Order, QuerierWrapper, Response, StdResult, Storage, WasmMsg,
 };
 
 use cw2::set_contract_version;
@@ -20,7 +20,8 @@ use cw_utils::{maybe_addr, Expiration, ThresholdResponse};
 
 use crate::error::ContractError;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, VoteInfo, VoteListResponse, VoteResponse,
+    ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, VoteData, VoteInfo, VoteListResponse,
+    VoteResponse,
 };
 use crate::state::{last_id, next_id, Config, Data, BALLOTS, CONFIG, PROPOSALS};
 
@@ -56,7 +57,7 @@ pub fn instantiate(
         group_addr,
         proposal_deposit,
         hook_contracts: msg.hook_contracts,
-        price_key: msg.price_key,
+        price_keys: msg.price_keys,
     };
     CONFIG.save(deps.storage, &cfg)?;
 
@@ -71,10 +72,8 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response<Empty>, ContractError> {
     match msg {
-        ExecuteMsg::Propose { price, latest } => execute_propose(deps, env, info, price, latest),
-        ExecuteMsg::Vote { proposal_id, price } => {
-            execute_vote(deps, env, info, proposal_id, price)
-        }
+        ExecuteMsg::Propose { data, latest } => execute_propose(deps, env, info, data, latest),
+        ExecuteMsg::Vote { proposal_id, data } => execute_vote(deps, env, info, proposal_id, data),
         ExecuteMsg::Close { proposal_id } => execute_close(deps, env, info, proposal_id),
         ExecuteMsg::MemberChangedHook(MemberChangedHookMsg { diffs }) => {
             execute_membership_hook(deps, env, info, diffs)
@@ -86,7 +85,7 @@ pub fn execute_propose(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    price: Uint128,
+    data: VoteData,
     // we ignore earliest
     latest: Option<Expiration>,
 ) -> Result<Response<Empty>, ContractError> {
@@ -95,6 +94,11 @@ pub fn execute_propose(
 
     // only members of the multisig can create a proposal
     let cfg = CONFIG.load(deps.storage)?;
+
+    // verify data
+    if !cfg.verify_data(&data) {
+        return Err(ContractError::WrongVoteData {});
+    }
 
     // Check that the native deposit was paid (as needed).
     if let Some(deposit) = cfg.proposal_deposit.as_ref() {
@@ -149,7 +153,7 @@ pub fn execute_propose(
     // add the first yes vote from voter
     let data = Data {
         weight: vote_power,
-        price,
+        data,
     };
     BALLOTS.save(deps.storage, (id, &info.sender), &data)?;
 
@@ -166,10 +170,15 @@ pub fn execute_vote(
     env: Env,
     info: MessageInfo,
     proposal_id: u64,
-    price: Uint128,
+    data: VoteData,
 ) -> Result<Response<Empty>, ContractError> {
     // only members of the multisig can vote
     let cfg = CONFIG.load(deps.storage)?;
+
+    // verify data
+    if !cfg.verify_data(&data) {
+        return Err(ContractError::WrongVoteData {});
+    }
 
     // ensure proposal exists and can be voted on
     let mut prop = PROPOSALS.load(deps.storage, proposal_id)?;
@@ -195,7 +204,7 @@ pub fn execute_vote(
         Some(_) => Err(ContractError::AlreadyVoted {}),
         None => Ok(Data {
             weight: vote_power,
-            price,
+            data,
         }),
     })?;
 
@@ -207,37 +216,40 @@ pub fn execute_vote(
 
     // if passed then execute
     if prop.status == Status::Passed {
-        // get price by using median
-        let prices = BALLOTS
+        let data_list = BALLOTS
             .prefix(proposal_id)
             .range(deps.storage, None, None, Order::Ascending)
-            .map(|item| Ok(item?.1.price))
-            .collect::<StdResult<Vec<_>>>()?
-            .sort();
+            .map(|item| Ok(item?.1.data))
+            .collect::<StdResult<Vec<_>>>()?;
 
-        let mid = prices.len() / 2;
-        let median_price = prices[mid];
+        for price_key in cfg.price_keys {
+            // extract prices from each key
+            let mut prices = data_list
+                .iter()
+                .map(|data| data[&price_key])
+                .collect::<Vec<_>>();
+            prices.sort();
+            // get price by using median
+            let mid = prices.len() / 2;
+            let median_price = prices[mid];
 
-        // now create message for props.msgs and update it
-        prop.msgs = cfg
-            .hook_contracts
-            .iter()
-            .map(|addr| {
-                CosmosMsg::Wasm(WasmMsg::Execute {
+            // now create message for props.msgs and update it
+            cfg.hook_contracts.iter().for_each(|addr| {
+                prop.msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: addr.to_string(),
                     funds: vec![],
                     msg: Binary::from(
                         format!(
                             r#"{{"append_price":{{"key":"{}","price":"{}","timestamp":"{}"}}}}"#,
-                            cfg.price_key,
+                            price_key,
                             median_price,
                             env.block.time.seconds()
                         )
                         .as_bytes(),
                     ),
-                })
-            })
-            .collect();
+                }));
+            });
+        }
 
         // set it to executed
         prop.status = Status::Executed;

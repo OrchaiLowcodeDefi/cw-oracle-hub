@@ -1,9 +1,11 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, StdResult, Storage, Uint128};
+use cosmwasm_std::{Addr, StdResult, Storage};
 use cw3::{DepositInfo, Proposal};
 use cw4::Cw4Contract;
 use cw_storage_plus::{Item, Map};
 use cw_utils::{Duration, Threshold};
+
+use crate::msg::VoteData;
 
 #[cw_serde]
 pub struct Config {
@@ -15,15 +17,32 @@ pub struct Config {
     /// The price, if any, of creating a new proposal.
     pub proposal_deposit: Option<DepositInfo>,
 
-    pub price_key: String,
+    pub price_keys: Vec<String>,
     /// The contracts to be executed after by calling ExecuteMsg::AppendPrice { key, price, timestamp }
     pub hook_contracts: Vec<Addr>,
+}
+
+impl Config {
+    pub fn verify_data(&self, data: &VoteData) -> bool {
+        // different size
+        if data.keys().len() != self.price_keys.len() {
+            return false;
+        }
+
+        // not provide given key
+        for key in &self.price_keys {
+            if !data.contains_key(key) {
+                return false;
+            }
+        }
+        true
+    }
 }
 
 #[cw_serde]
 pub struct Data {
     pub weight: u64,
-    pub price: Uint128,
+    pub data: VoteData,
 }
 
 pub const PROPOSAL_COUNT: Item<u64> = Item::new("proposal_count");

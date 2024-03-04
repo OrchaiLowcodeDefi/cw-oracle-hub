@@ -30,6 +30,9 @@ pub enum ContractError {
     #[error("Wrong expiration option")]
     WrongExpiration {},
 
+    #[error("Wrong vote data")]
+    WrongVoteData {},
+
     #[error("Already voted on this proposal")]
     AlreadyVoted {},
 
