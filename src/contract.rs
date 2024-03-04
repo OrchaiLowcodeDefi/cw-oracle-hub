@@ -222,6 +222,7 @@ pub fn execute_vote(
             .map(|item| Ok(item?.1.data))
             .collect::<StdResult<Vec<_>>>()?;
 
+        let mut msgs: Vec<CosmosMsg> = vec![];
         for price_key in cfg.price_keys {
             // extract prices from each key
             let mut prices = data_list
@@ -235,7 +236,7 @@ pub fn execute_vote(
 
             // now create message for props.msgs and update it
             cfg.hook_contracts.iter().for_each(|addr| {
-                prop.msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                msgs.push(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: addr.to_string(),
                     funds: vec![],
                     msg: Binary::from(
@@ -260,7 +261,7 @@ pub fn execute_vote(
         };
 
         // add msgs to response
-        response = response.add_messages(prop.msgs.clone());
+        response = response.add_messages(msgs);
     }
 
     PROPOSALS.save(deps.storage, proposal_id, &prop)?;
