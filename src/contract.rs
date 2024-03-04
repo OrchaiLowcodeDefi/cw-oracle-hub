@@ -241,7 +241,7 @@ pub fn execute_vote(
                     funds: vec![],
                     msg: Binary::from(
                         format!(
-                            r#"{{"append_price":{{"key":"{}","price":"{}","timestamp":"{}"}}}}"#,
+                            r#"{{"append_price":{{"key":"{}","price":"{}","timestamp":{}}}}}"#,
                             price_key,
                             median_price,
                             env.block.time.seconds()
