@@ -258,6 +258,9 @@ pub fn execute_vote(
         if let Some(deposit) = &prop.deposit {
             response = response.add_message(deposit.get_return_deposit_message(&prop.proposer)?);
         };
+
+        // add msgs to repose
+        response = response.add_messages(prop.msgs.clone());
     }
 
     PROPOSALS.save(deps.storage, proposal_id, &prop)?;
