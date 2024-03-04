@@ -259,7 +259,7 @@ pub fn execute_vote(
             response = response.add_message(deposit.get_return_deposit_message(&prop.proposer)?);
         };
 
-        // add msgs to repose
+        // add msgs to response
         response = response.add_messages(prop.msgs.clone());
     }
 
