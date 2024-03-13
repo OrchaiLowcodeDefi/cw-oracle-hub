@@ -110,11 +110,9 @@ fn update_price_feed() {
             )
             .unwrap()
             .events
-            .iter()
-            .find(|e| e.ty == "wasm")
-            .unwrap()
-            .attributes
-            .iter()
+            .into_iter()
+            .filter(|e| e.ty == "wasm")
+            .flat_map(|e| e.attributes)
             .find(|a| a.key == "proposal_id")
             .unwrap()
             .value,
