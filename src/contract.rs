@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Api, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
-    Order, QuerierWrapper, Response, StdResult, Storage, WasmMsg,
+    Order, QuerierWrapper, Response, StdResult, Storage, Uint128, WasmMsg,
 };
 
 use cw2::set_contract_version;
@@ -225,14 +225,13 @@ pub fn execute_vote(
         let mut msgs: Vec<CosmosMsg> = vec![];
         for price_key in cfg.price_keys {
             // extract prices from each key
-            let mut prices = data_list
+            let prices = data_list
                 .iter()
                 .map(|data| data[&price_key])
                 .collect::<Vec<_>>();
-            prices.sort();
+
             // get price by using median
-            let mid = prices.len() / 2;
-            let median_price = prices[mid];
+            let median_price = calculate_median_price(prices);
 
             // now create message for props.msgs and update it
             cfg.hook_contracts.iter().for_each(|addr| {
@@ -555,4 +554,19 @@ fn query_last_proposal(deps: Deps, env: Env) -> StdResult<Option<ProposalRespons
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     Ok(Response::default())
+}
+
+pub fn calculate_median_price(mut prices: Vec<Uint128>) -> Uint128 {
+    let l = prices.len();
+
+    prices.sort();
+
+    let ind = l / 2;
+
+    if l == ind * 2 {
+        // calculate median
+        return Uint128::from((prices[ind - 1] + prices[ind]).u128() / 2);
+    }
+
+    return prices[ind];
 }
