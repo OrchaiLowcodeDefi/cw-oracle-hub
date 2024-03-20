@@ -557,16 +557,13 @@ pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, 
 }
 
 pub fn calculate_median_price(mut prices: Vec<Uint128>) -> Uint128 {
-    let l = prices.len();
-
     prices.sort();
-
-    let ind = l / 2;
-
-    if l == ind * 2 {
+    let l = prices.len();
+    let ind = l >> 1;
+    if l == ind << 1 {
         // calculate median
-        return Uint128::from((prices[ind - 1] + prices[ind]).u128() / 2);
+        (prices[ind - 1] + prices[ind]) >> 1
+    } else {
+        prices[ind]
     }
-
-    return prices[ind];
 }
