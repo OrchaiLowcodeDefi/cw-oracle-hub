@@ -1,8 +1,8 @@
 use cosmwasm_schema::{cw_serde, schemars::Map, QueryResponses};
 use cosmwasm_std::{Addr, Uint128};
-use cw3::UncheckedDepositInfo;
+use cw3::{DepositInfo, Status, UncheckedDepositInfo};
 use cw4::MemberChangedHookMsg;
-use cw_utils::{Duration, Expiration, Threshold};
+use cw_utils::{Duration, Expiration, Threshold, ThresholdResponse};
 
 use crate::state::Data;
 
@@ -86,7 +86,6 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct VoteInfo {
-    pub proposal_id: u64,
     pub voter: String,
     pub data: Data,
 }
@@ -99,4 +98,27 @@ pub struct VoteResponse {
 #[cw_serde]
 pub struct VoteListResponse {
     pub votes: Vec<VoteInfo>,
+}
+
+#[cw_serde]
+pub struct ProposalResponse {
+    pub id: u64,
+    pub title: String,
+    pub description: String,
+    pub votes: Vec<VoteInfo>,
+    pub status: Status,
+    pub expires: Expiration,
+    /// This is the threshold that is applied to this proposal. Both
+    /// the rules of the voting contract, as well as the total_weight
+    /// of the voting group may have changed since this time. That
+    /// means that the generic `Threshold{}` query does not provide
+    /// valid information for existing proposals.
+    pub threshold: ThresholdResponse,
+    pub proposer: Addr,
+    pub deposit: Option<DepositInfo>,
+}
+
+#[cw_serde]
+pub struct ProposalListResponse {
+    pub proposals: Vec<ProposalResponse>,
 }

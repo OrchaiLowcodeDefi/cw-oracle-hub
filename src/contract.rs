@@ -9,10 +9,7 @@ use cosmwasm_std::{
 
 use cw2::set_contract_version;
 
-use cw3::{
-    Proposal, ProposalListResponse, ProposalResponse, Status, Vote, VoterDetail, VoterListResponse,
-    VoterResponse, Votes,
-};
+use cw3::{Proposal, Status, Vote, VoterDetail, VoterListResponse, VoterResponse, Votes};
 
 use cw4::{Cw4Contract, MemberChangedHookMsg, MemberDiff, MEMBERS_KEY};
 use cw_storage_plus::{Bound, Map};
@@ -20,8 +17,8 @@ use cw_utils::{maybe_addr, Expiration, ThresholdResponse};
 
 use crate::error::ContractError;
 use crate::msg::{
-    ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, VoteData, VoteInfo, VoteListResponse,
-    VoteResponse,
+    ExecuteMsg, InstantiateMsg, MigrateMsg, ProposalListResponse, ProposalResponse, QueryMsg,
+    VoteData, VoteInfo, VoteListResponse, VoteResponse,
 };
 use crate::state::{last_id, next_id, Config, Data, BALLOTS, CONFIG, PROPOSALS};
 
@@ -364,7 +361,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&list_voters(deps, start_after, limit)?)
         }
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
-        QueryMsg::LastProposal {} => to_binary(&query_last_proposal(deps, env)?),
+        QueryMsg::LastProposal {} => to_binary(&query_last_proposal(deps, env)),
     }
 }
 
@@ -382,11 +379,12 @@ fn query_proposal(deps: Deps, env: Env, id: u64) -> StdResult<ProposalResponse> 
     let prop = PROPOSALS.load(deps.storage, id)?;
     let status = prop.current_status(&env.block);
     let threshold = prop.threshold.to_response(prop.total_weight);
+
     Ok(ProposalResponse {
         id,
         title: prop.title,
         description: prop.description,
-        msgs: prop.msgs,
+        votes: list_votes(deps, id, None, Some(MAX_LIMIT))?.votes,
         status,
         expires: prop.expires,
         proposer: prop.proposer,
@@ -444,7 +442,7 @@ fn map_proposal(
             id,
             title: prop.title,
             description: prop.description,
-            msgs: prop.msgs,
+            votes: vec![],
             status,
             expires: prop.expires,
             deposit: prop.deposit,
@@ -457,11 +455,7 @@ fn map_proposal(
 fn query_vote(deps: Deps, proposal_id: u64, voter: String) -> StdResult<VoteResponse> {
     let voter_addr = deps.api.addr_validate(&voter)?;
     let prop = BALLOTS.may_load(deps.storage, (proposal_id, &voter_addr))?;
-    let vote = prop.map(|b| VoteInfo {
-        proposal_id,
-        voter,
-        data: b,
-    });
+    let vote = prop.map(|b| VoteInfo { voter, data: b });
     Ok(VoteResponse { vote })
 }
 
@@ -481,7 +475,6 @@ fn list_votes(
         .take(limit)
         .map(|item| {
             item.map(|(addr, data)| VoteInfo {
-                proposal_id,
                 voter: addr.into(),
                 data,
             })
@@ -544,10 +537,10 @@ fn list_voters(
     Ok(VoterListResponse { voters })
 }
 
-fn query_last_proposal(deps: Deps, env: Env) -> StdResult<Option<ProposalResponse>> {
-    match last_id(deps.storage)? {
-        0 => Ok(None),
-        last_prop_id => Ok(Some(query_proposal(deps, env, last_prop_id)?)),
+fn query_last_proposal(deps: Deps, env: Env) -> Option<ProposalResponse> {
+    match last_id(deps.storage).unwrap_or_default() {
+        0 => None,
+        last_prop_id => query_proposal(deps, env, last_prop_id).ok(),
     }
 }
 
