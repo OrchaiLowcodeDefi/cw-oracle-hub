@@ -1,10 +1,10 @@
 use cosmwasm_std::Coin;
-use cw3::{ProposalResponse, Status};
+use cw3::Status;
 use cw_utils::{Duration, Threshold};
 use osmosis_test_tube::{Module, OraichainTestApp, Wasm};
 use test_tube::{Account, SigningAccount};
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, ProposalResponse, QueryMsg};
 
 const CW4_GROUP_WASM_BYTES: &[u8] = include_bytes!("../testdata/cw4-group.wasm");
 const ORACLE_HUB_WASM_BYTES: &[u8] = include_bytes!("../testdata/cw-oracle-hub.wasm");
@@ -186,4 +186,71 @@ fn update_price_feed() {
         member0,
     )
     .unwrap();
+}
+
+#[test]
+fn query_last_proposal() {
+    let (app, accounts, cw_oracle_hub_addr) = init_app();
+
+    let wasm = Wasm::new(&app);
+
+    // create first round then  update
+    let (member0, member1, member2) = (&accounts[0], &accounts[1], &accounts[2]);
+
+    // first user propose
+    let proposal_id = u64::from_str_radix(
+        &wasm
+            .execute(
+                &cw_oracle_hub_addr,
+                &ExecuteMsg::Propose {
+                    data: [("orai".to_string(), 11_000_000u128.into())].into(),
+                    latest: None,
+                },
+                &[],
+                member0,
+            )
+            .unwrap()
+            .events
+            .into_iter()
+            .filter(|e| e.ty == "wasm")
+            .flat_map(|e| e.attributes)
+            .find(|a| a.key == "proposal_id")
+            .unwrap()
+            .value,
+        10,
+    )
+    .unwrap();
+
+    // second user vote
+    wasm.execute(
+        &cw_oracle_hub_addr,
+        &ExecuteMsg::Vote {
+            proposal_id,
+            data: [("orai".to_string(), 11_000_000u128.into())].into(),
+        },
+        &[],
+        member1,
+    )
+    .unwrap();
+
+    // third user vote, should pass and execute
+    wasm.execute(
+        &cw_oracle_hub_addr,
+        &ExecuteMsg::Vote {
+            proposal_id,
+            data: [("orai".to_string(), 11_100_000u128.into())].into(),
+        },
+        &[],
+        member2,
+    )
+    .unwrap();
+
+    // query last proposal
+    let proposal: ProposalResponse = wasm
+        .query(&cw_oracle_hub_addr, &QueryMsg::LastProposal {})
+        .unwrap();
+
+    assert_eq!(proposal.status, Status::Executed);
+
+    assert_eq!(proposal.votes.len(), 3);
 }
