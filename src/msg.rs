@@ -104,6 +104,7 @@ pub struct VoteListResponse {
 pub struct ProposalResponse {
     pub id: u64,
     pub title: String,
+    pub updated_at: u64,
     pub description: String,
     pub votes: Vec<VoteInfo>,
     pub status: Status,
