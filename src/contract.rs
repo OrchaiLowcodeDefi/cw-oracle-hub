@@ -13,7 +13,7 @@ use cw3::{Proposal, Status, Vote, VoterDetail, VoterListResponse, VoterResponse,
 
 use cw4::{Cw4Contract, MemberChangedHookMsg, MemberDiff, MEMBERS_KEY};
 use cw_storage_plus::{Bound, Map};
-use cw_utils::{maybe_addr, Expiration, ThresholdResponse};
+use cw_utils::{maybe_addr, Duration, Expiration, Threshold, ThresholdResponse};
 
 use crate::error::ContractError;
 use crate::msg::{
@@ -49,6 +49,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let cfg = Config {
+        owner: deps.api.addr_validate(&msg.owner)?,
         threshold: msg.threshold,
         max_submitting_period: msg.max_submitting_period,
         group_addr,
@@ -75,7 +76,57 @@ pub fn execute(
         ExecuteMsg::MemberChangedHook(MemberChangedHookMsg { diffs }) => {
             execute_membership_hook(deps, env, info, diffs)
         }
+        ExecuteMsg::UpdateConfig {
+            owner,
+            threshold,
+            max_submitting_period,
+            price_keys,
+            hook_contracts,
+        } => execute_update_config(
+            deps,
+            info,
+            owner,
+            threshold,
+            max_submitting_period,
+            price_keys,
+            hook_contracts,
+        ),
     }
+}
+
+fn execute_update_config(
+    deps: DepsMut,
+    info: MessageInfo,
+    owner: Option<String>,
+    threshold: Option<Threshold>,
+    max_submitting_period: Option<Duration>,
+    price_keys: Option<Vec<String>>,
+    hook_contracts: Option<Vec<Addr>>,
+) -> Result<Response<Empty>, ContractError> {
+    let mut config = CONFIG.load(deps.storage)?;
+
+    if config.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+    if let Some(owner) = owner {
+        config.owner = deps.api.addr_validate(&owner)?;
+    }
+    if let Some(threshold) = threshold {
+        config.threshold = threshold;
+    }
+    if let Some(max_submitting_period) = max_submitting_period {
+        config.max_submitting_period = max_submitting_period;
+    }
+    if let Some(price_keys) = price_keys {
+        config.price_keys = price_keys;
+    }
+    if let Some(hook_contracts) = hook_contracts {
+        config.hook_contracts = hook_contracts;
+    }
+
+    CONFIG.save(deps.storage, &config)?;
+
+    Ok(Response::new().add_attribute("action", "update_config"))
 }
 
 pub fn execute_propose(

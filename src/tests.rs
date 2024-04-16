@@ -4,7 +4,10 @@ use cw_utils::{Duration, Threshold};
 use osmosis_test_tube::{Module, OraichainTestApp, Wasm};
 use test_tube::{Account, SigningAccount};
 
-use crate::msg::{ExecuteMsg, InstantiateMsg, ProposalResponse, QueryMsg};
+use crate::{
+    msg::{ExecuteMsg, InstantiateMsg, ProposalResponse, QueryMsg},
+    state::Config,
+};
 
 const CW4_GROUP_WASM_BYTES: &[u8] = include_bytes!("../testdata/cw4-group.wasm");
 const ORACLE_HUB_WASM_BYTES: &[u8] = include_bytes!("../testdata/cw-oracle-hub.wasm");
@@ -68,6 +71,7 @@ fn init_app() -> (OraichainTestApp, Vec<SigningAccount>, String) {
         .instantiate(
             oracle_hub_code_id,
             &InstantiateMsg {
+                owner: owner.address(),
                 group_addr: cw4_group_addr.clone(),
                 threshold: Threshold::AbsoluteCount { weight: 3 },
                 max_submitting_period: Duration::Time(3600),
@@ -253,4 +257,52 @@ fn query_last_proposal() {
     assert_eq!(proposal.status, Status::Executed);
 
     assert_eq!(proposal.votes.len(), 3);
+}
+
+#[test]
+fn update_config() {
+    let (app, accounts, cw_oracle_hub_addr) = init_app();
+
+    let wasm = Wasm::new(&app);
+
+    // try update config fail, unauthorized
+    wasm.execute(
+        &cw_oracle_hub_addr,
+        &ExecuteMsg::UpdateConfig {
+            owner: None,
+            threshold: None,
+            max_submitting_period: Some(Duration::Time(1200)),
+            price_keys: Some(vec!["ORAI".to_string(), "ETH".to_string()]),
+            hook_contracts: None,
+        },
+        &[],
+        &accounts[1],
+    )
+    .unwrap_err();
+
+    // try update config success
+    wasm.execute(
+        &cw_oracle_hub_addr,
+        &ExecuteMsg::UpdateConfig {
+            owner: None,
+            threshold: None,
+            max_submitting_period: Some(Duration::Time(1200)),
+            price_keys: Some(vec!["ORAI".to_string(), "ETH".to_string()]),
+            hook_contracts: None,
+        },
+        &[],
+        &accounts[0],
+    )
+    .unwrap();
+
+    //query config
+    let config: Config = wasm
+        .query(&cw_oracle_hub_addr, &QueryMsg::Config {})
+        .unwrap();
+
+    assert_eq!(config.max_submitting_period, Duration::Time(1200));
+    assert_eq!(
+        config.price_keys,
+        vec!["ORAI".to_string(), "ETH".to_string()]
+    );
 }

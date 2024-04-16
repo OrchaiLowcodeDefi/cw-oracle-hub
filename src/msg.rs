@@ -10,6 +10,7 @@ pub type VoteData = Map<String, Uint128>; // key: price
 
 #[cw_serde]
 pub struct InstantiateMsg {
+    pub owner: String,
     // this is the group contract that contains the member list
     pub group_addr: String,
     pub threshold: Threshold,
@@ -39,6 +40,13 @@ pub enum ExecuteMsg {
     },
     /// Handles update hook messages from the group contract
     MemberChangedHook(MemberChangedHookMsg),
+    UpdateConfig {
+        owner: Option<String>,
+        threshold: Option<Threshold>,
+        max_submitting_period: Option<Duration>,
+        price_keys: Option<Vec<String>>,
+        hook_contracts: Option<Vec<Addr>>,
+    },
 }
 
 #[cw_serde]

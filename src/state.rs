@@ -9,6 +9,7 @@ use crate::msg::VoteData;
 
 #[cw_serde]
 pub struct Config {
+    pub owner: Addr,
     pub threshold: Threshold,
     pub max_submitting_period: Duration,
     // Total weight and voters are queried from this contract
