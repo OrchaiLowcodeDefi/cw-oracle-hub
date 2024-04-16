@@ -383,6 +383,7 @@ fn query_proposal(deps: Deps, env: Env, id: u64) -> StdResult<ProposalResponse> 
     Ok(ProposalResponse {
         id,
         title: prop.title,
+        updated_at: prop.start_height,
         description: prop.description,
         votes: list_votes(deps, id, None, Some(MAX_LIMIT))?.votes,
         status,
@@ -440,6 +441,7 @@ fn map_proposal(
         let threshold = prop.threshold.to_response(prop.total_weight);
         ProposalResponse {
             id,
+            updated_at: prop.start_height,
             title: prop.title,
             description: prop.description,
             votes: vec![],
