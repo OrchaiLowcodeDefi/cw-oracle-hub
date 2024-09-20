@@ -1,4 +1,4 @@
-use cosmwasm_std::Coin;
+use cosmwasm_std::{Coin, Decimal256};
 use cw3::Status;
 use cw_utils::{Duration, Threshold};
 use osmosis_test_tube::{Module, OraichainTestApp, Wasm};
@@ -106,7 +106,11 @@ fn update_price_feed() {
             .execute(
                 &cw_oracle_hub_addr,
                 &ExecuteMsg::Propose {
-                    data: [("orai".to_string(), 11_000_000u128.into())].into(),
+                    data: [(
+                        "orai".to_string(),
+                        Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+                    )]
+                    .into(),
                     latest: None,
                 },
                 &[],
@@ -129,7 +133,11 @@ fn update_price_feed() {
         &cw_oracle_hub_addr,
         &ExecuteMsg::Vote {
             proposal_id,
-            data: [("orai".to_string(), 11_000_000u128.into())].into(),
+            data: [(
+                "orai".to_string(),
+                Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+            )]
+            .into(),
         },
         &[],
         member1,
@@ -141,7 +149,11 @@ fn update_price_feed() {
         &cw_oracle_hub_addr,
         &ExecuteMsg::Vote {
             proposal_id,
-            data: [("orai".to_string(), 11_000_000u128.into())].into(),
+            data: [(
+                "orai".to_string(),
+                Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+            )]
+            .into(),
         },
         &[],
         member2,
@@ -158,7 +170,11 @@ fn update_price_feed() {
     wasm.execute(
         &cw_oracle_hub_addr,
         &ExecuteMsg::Propose {
-            data: [("orai".to_string(), 11_000_000u128.into())].into(),
+            data: [(
+                "orai".to_string(),
+                Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+            )]
+            .into(),
             latest: None,
         },
         &[],
@@ -170,7 +186,11 @@ fn update_price_feed() {
     wasm.execute(
         &cw_oracle_hub_addr,
         &ExecuteMsg::Propose {
-            data: [("orai".to_string(), 11_000_000u128.into())].into(),
+            data: [(
+                "orai".to_string(),
+                Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+            )]
+            .into(),
             latest: None,
         },
         &[],
@@ -183,7 +203,11 @@ fn update_price_feed() {
     wasm.execute(
         &cw_oracle_hub_addr,
         &ExecuteMsg::Propose {
-            data: [("orai".to_string(), 11_000_000u128.into())].into(),
+            data: [(
+                "orai".to_string(),
+                Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+            )]
+            .into(),
             latest: None,
         },
         &[],
@@ -207,7 +231,11 @@ fn query_last_proposal() {
             .execute(
                 &cw_oracle_hub_addr,
                 &ExecuteMsg::Propose {
-                    data: [("orai".to_string(), 11_000_000u128.into())].into(),
+                    data: [(
+                        "orai".to_string(),
+                        Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+                    )]
+                    .into(),
                     latest: None,
                 },
                 &[],
@@ -230,7 +258,11 @@ fn query_last_proposal() {
         &cw_oracle_hub_addr,
         &ExecuteMsg::Vote {
             proposal_id,
-            data: [("orai".to_string(), 11_000_000u128.into())].into(),
+            data: [(
+                "orai".to_string(),
+                Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+            )]
+            .into(),
         },
         &[],
         member1,
@@ -242,7 +274,11 @@ fn query_last_proposal() {
         &cw_oracle_hub_addr,
         &ExecuteMsg::Vote {
             proposal_id,
-            data: [("orai".to_string(), 11_100_000u128.into())].into(),
+            data: [(
+                "orai".to_string(),
+                Decimal256::from_atomics(11_000_000u128, 0).unwrap(),
+            )]
+            .into(),
         },
         &[],
         member2,
