@@ -3,8 +3,8 @@ use std::cmp::Ordering;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Api, Binary, BlockInfo, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo,
-    Order, QuerierWrapper, Response, StdResult, Storage, Uint128, WasmMsg,
+    to_binary, Addr, Api, Binary, BlockInfo, CosmosMsg, Decimal256, Deps, DepsMut, Empty, Env,
+    MessageInfo, Order, QuerierWrapper, Response, StdResult, Storage, Uint128, WasmMsg,
 };
 
 use cw2::set_contract_version;
@@ -288,10 +288,8 @@ pub fn execute_vote(
                     funds: vec![],
                     msg: Binary::from(
                         format!(
-                            r#"{{"append_price":{{"key":"{}","price":"{}","timestamp":{}}}}}"#,
-                            price_key,
-                            median_price,
-                            env.block.time.seconds()
+                            r#"{{"append_price":{{"denom":"{}","price":"{}"}}}}"#,
+                            price_key, median_price,
                         )
                         .as_bytes(),
                     ),
@@ -602,13 +600,15 @@ pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, 
     Ok(Response::default())
 }
 
-pub fn calculate_median_price(mut prices: Vec<Uint128>) -> Uint128 {
+pub fn calculate_median_price(mut prices: Vec<Decimal256>) -> Decimal256 {
     prices.sort();
     let l = prices.len();
     let ind = l >> 1;
     if l == ind << 1 {
         // calculate median
-        (prices[ind - 1] + prices[ind]) >> 1
+        (prices[ind - 1] + prices[ind])
+            .checked_div(Decimal256::from_atomics(2u128, 0).unwrap())
+            .unwrap()
     } else {
         prices[ind]
     }

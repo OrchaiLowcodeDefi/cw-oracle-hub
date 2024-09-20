@@ -1,12 +1,12 @@
 use cosmwasm_schema::{cw_serde, schemars::Map, QueryResponses};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Decimal256, Uint128};
 use cw3::{DepositInfo, Status, UncheckedDepositInfo};
 use cw4::MemberChangedHookMsg;
 use cw_utils::{Duration, Expiration, Threshold, ThresholdResponse};
 
 use crate::state::Data;
 
-pub type VoteData = Map<String, Uint128>; // key: price
+pub type VoteData = Map<String, Decimal256>; // key: price
 
 #[cw_serde]
 pub struct InstantiateMsg {
